@@ -1,0 +1,64 @@
+# Configuration for Metasurface EMI Automation Pipeline (Phase 1.1)
+
+geometry:
+  resolution: 128
+  px_mm: 5.715
+  py_mm: 5.080
+  symmetry: "C4v"
+  min_feature_size_um: 150.0
+
+conductivity_mapping:
+  sigma_film: 10000.0   # S/m
+  beta: 4.0             # Heaviside sharpness parameter
+  host_eps_r: 1.0       # Host relative permittivity of patterned sheet layer
+
+stackup:
+  layer_superstrate:
+    name: "Air"
+    thickness_um: 0.0
+    eps_r: 1.0
+    mu_r: 1.0
+  layer_metasurface:
+    name: "Patterned MXene / Carbon Film"
+    thickness_um: 25.0
+    sigma_film: 10000.0
+  layer_spacer:
+    name: "Polyimide Dielectric Film"
+    thickness_um: 50.0
+    eps_r_real: 3.5
+    loss_tangent: 0.008
+    mu_r_real: 1.0
+  layer_absorber:
+    name: "Carbonyl Iron / Polyurethane Composite"
+    thickness_um: 1100.0
+    eps_r_real: 4.2
+    eps_r_imag: -1.8
+    mu_r_real: 1.4
+    mu_r_imag: -0.6
+    static_mu_s: 1.4
+  layer_substrate:
+    name: "Air Exit"
+    thickness_um: 0.0
+    eps_r: 1.0
+    mu_r: 1.0
+  total_thickness_mm: 1.175
+
+frequency_sweep:
+  f_min_ghz: 8.2
+  f_max_ghz: 18.0
+  num_points: 101
+  incidence_angle_deg: 0.0
+
+validation_gates:
+  max_rozanov_ratio: 1.0
+  target_min_rozanov_ratio: 0.75
+  min_shielding_total_db: 60.0
+  min_absorption_ratio: 0.90
+  symmetry_degeneracy_tol: 1e-4
+  passivity_tol: 1e-5
+
+dataset:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  batch_size: 100
+  default_test_samples: 10
