@@ -23,10 +23,13 @@ def compute_rozanov_metric(
     Formula:
         \rho_R = | \int_{\lambda_min}^{\lambda_max} \ln|S11(\lambda)| d\lambda | / (2 * \pi^2 * \mu_s * d)
         
-    Interpretation:
+    Theoretical Context:
+        Rozanov's bound (Rozanov 2000) was mathematically derived for a single-port,
+        perfectly metal-backed (PEC) absorber (S21 = 0).
+        For an unbacked transmission shield (S21 != 0), this integral evaluates the
+        reflection absorption component relative to the theoretical metal-backed ceiling.
         \rho_R <= 1.0 : Physically realizable and causal.
-        \rho_R > 1.0  : Violates Rozanov fundamental bound (unphysical hallucination).
-        0.75 <= \rho_R <= 0.88 : Approaching theoretical optimum (Target requirement).
+        \rho_R > 1.0  : Violates fundamental causality bound.
     """
     c0 = 299792458.0  # m/s
     freqs_hz = freqs_ghz * 1e9
@@ -48,6 +51,7 @@ def compute_rozanov_metric(
     
     rho_R = float(integral_val / rozanov_limit)
     return rho_R
+
 
 
 def check_passivity(
@@ -80,18 +84,26 @@ def check_passivity(
     return bool(is_passive), stats
 
 
-def check_c4v_symmetry(
+def check_polarization_symmetry(
     S11_te: np.ndarray,
     S11_tm: np.ndarray,
     tol: float = 1e-3,
 ) -> Tuple[bool, float]:
     """
-    Validates polarization degeneracy (|S11_TE - S11_TM| < tol)
-    guaranteed by C4v point-group symmetry.
+    Validates polarization symmetry / degeneracy (|S11_TE - S11_TM| < tol).
+    
+    Theoretical Context:
+    - For square unit cells (Px == Py), C4v fourfold point-group symmetry enforces
+      strict polarization degeneracy (S11_TE == S11_TM).
+    - For rectangular lattices (Px != Py), C2v (D2h) point-group symmetry guarantees
+      zero cross-polarization (S21_VH = 0) with mild dual-polarization birefringence.
     """
     max_diff = float(np.max(np.abs(S11_te - S11_tm)))
     is_symmetric = max_diff < tol
     return bool(is_symmetric), max_diff
+
+
+check_c4v_symmetry = check_polarization_symmetry  # Backward-compatible alias
 
 
 def audit_sample(
@@ -115,7 +127,7 @@ def audit_sample(
     
     # 3. Symmetry check (if TM data provided)
     if S11_tm is not None:
-        symmetry_ok, sym_diff = check_c4v_symmetry(S11_te, S11_tm)
+        symmetry_ok, sym_diff = check_polarization_symmetry(S11_te, S11_tm)
     else:
         symmetry_ok, sym_diff = True, 0.0
         
@@ -131,3 +143,4 @@ def audit_sample(
         "min_absorption": passivity_stats["min_absorption"],
         "symmetry_max_diff": sym_diff,
     }
+

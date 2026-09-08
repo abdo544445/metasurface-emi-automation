@@ -151,25 +151,43 @@ class MetasurfaceRCWASolver:
         freq_hz: float,
         M_sigma: np.ndarray,
         pol: str = 'TE',
-    ) -> Tuple[complex, complex]:
+        theta_rad: float = 0.0,
+        phi_rad: float = 0.0,
+        return_modal_fields: bool = False,
+    ) -> Union[Tuple[complex, complex], Tuple[complex, complex, np.ndarray]]:
         """
-        Solves RCWA-TMM boundary value problem for a single frequency point.
+        Solves RCWA-TMM boundary value problem for a single frequency point
+        under arbitrary incident elevation angle theta and azimuth angle phi.
         
+        Args:
+            freq_hz: Frequency in Hertz.
+            M_sigma: Fourier Toeplitz convolution matrix of surface conductivity.
+            pol: Polarization mode ('TE' or 'TM').
+            theta_rad: Incident elevation angle in radians (0 = normal incidence).
+            phi_rad: Incident azimuth angle in radians (0 = along x-axis).
+            return_modal_fields: If True, returns (s11, s21, e_total_modal).
+            
         Returns:
-            S11: Complex reflection coefficient (zero-th order Floquet mode).
-            S21: Complex transmission coefficient (zero-th order Floquet mode).
+            s11: Complex reflection coefficient (zero-th order Floquet mode).
+            s21: Complex transmission coefficient (zero-th order Floquet mode).
+            e_total (optional): Vector of modal tangential electric field amplitudes.
         """
         omega = 2.0 * np.pi * freq_hz
-        
-        # Floquet wavevectors in x and y
-        k_x = self.m_indices * (2.0 * np.pi / self.stackup.px)
-        k_y = self.n_indices * (2.0 * np.pi / self.stackup.py)
-        
-        # 1. Exit half-space (Layer 5: Air)
         k0 = omega / C_0
+        
+        # Fundamental wavevector components from incident wave
+        k_x0 = k0 * np.sin(theta_rad) * np.cos(phi_rad)
+        k_y0 = k0 * np.sin(theta_rad) * np.sin(phi_rad)
+        
+        # Floquet wavevectors in x and y across all spatial harmonics
+        k_x = k_x0 + self.m_indices * (2.0 * np.pi / self.stackup.px)
+        k_y = k_y0 + self.n_indices * (2.0 * np.pi / self.stackup.py)
+        
+        # 1. Exit half-space (Layer 5: Air) and Superstrate (Layer 1: Air)
         kt2 = k_x**2 + k_y**2
         kz_air = np.sqrt(((k0**2) - kt2).astype(complex))
         kz_air = np.where(kz_air.imag > 0, -kz_air, kz_air)
+        kz_air = np.where(kz_air.real < 0, -kz_air, kz_air)
         
         if pol == 'TE':
             Y_exit = kz_air / (omega * MU_0 * 1.0)
@@ -213,7 +231,6 @@ class MetasurfaceRCWASolver:
         # (Y_super + Y_sub + Y_sheet) * E_trans_0 = 2 * Y_super * E_inc
         # S11 = (Y_super - Y_sub - Y_sheet) * (Y_super + Y_sub + Y_sheet)^(-1)
         A_mat = Y_super_diag + Y_sub_diag + Y_sheet
-        B_mat = Y_super_diag - Y_sub_diag - Y_sheet
         
         # Incident excitation vector (unit amplitude in fundamental zero-order mode)
         e_inc = np.zeros(self.num_harmonics, dtype=complex)
@@ -243,24 +260,33 @@ class MetasurfaceRCWASolver:
             s11 *= scale
             s21 *= scale
             
+        if return_modal_fields:
+            return s11, s21, e_total
         return s11, s21
 
     def solve(
         self,
         sdf: np.ndarray,
         pol: str = 'both',
+        theta_deg: float = 0.0,
+        phi_deg: float = 0.0,
     ) -> Dict[str, Any]:
         """
         Executes broadband frequency sweep (8.2 to 18.0 GHz, 101 points)
-        for a given unit cell SDF.
+        for a given unit cell SDF under specified incident elevation and azimuth angles.
         
         Args:
             sdf: 2D Signed Distance Field (resolution x resolution).
             pol: 'TE', 'TM', or 'both'.
+            theta_deg: Incident elevation angle in degrees (0 = normal incidence).
+            phi_deg: Incident azimuth angle in degrees (0 = along x-axis).
             
         Returns:
             Dictionary with frequencies, S11, S21, and shielding metrics.
         """
+        theta_rad = np.radians(theta_deg)
+        phi_rad = np.radians(phi_deg)
+        
         # Map SDF to 2D conductivity
         sigma_map = sdf_to_conductivity(
             sdf,
@@ -278,9 +304,13 @@ class MetasurfaceRCWASolver:
         s21_tm = np.zeros(self.num_freq_points, dtype=complex)
         
         for idx, f_hz in enumerate(self.freqs_hz):
-            s11_te[idx], s21_te[idx] = self.simulate_single_frequency(f_hz, M_sigma, pol='TE')
+            s11_te[idx], s21_te[idx] = self.simulate_single_frequency(
+                f_hz, M_sigma, pol='TE', theta_rad=theta_rad, phi_rad=phi_rad
+            )
             if pol in ['TM', 'both']:
-                s11_tm[idx], s21_tm[idx] = self.simulate_single_frequency(f_hz, M_sigma, pol='TM')
+                s11_tm[idx], s21_tm[idx] = self.simulate_single_frequency(
+                    f_hz, M_sigma, pol='TM', theta_rad=theta_rad, phi_rad=phi_rad
+                )
             else:
                 s11_tm[idx], s21_tm[idx] = s11_te[idx], s21_te[idx]
                 
@@ -292,6 +322,8 @@ class MetasurfaceRCWASolver:
             "freqs_ghz": self.freqs_ghz,
             "freqs_hz": self.freqs_hz,
             "wavelengths_m": self.wavelengths_m,
+            "theta_deg": theta_deg,
+            "phi_deg": phi_deg,
             "S11": s11_te,
             "S21": s21_te,
             "S11_TE": s11_te,
@@ -302,3 +334,72 @@ class MetasurfaceRCWASolver:
             "metrics": metrics_te,
             "metrics_tm": metrics_tm,
         }
+
+    def compute_surface_loss_density(
+        self,
+        sdf: np.ndarray,
+        freq_hz: float = 12.0e9,
+        pol: str = 'TE',
+        theta_deg: float = 0.0,
+        phi_deg: float = 0.0,
+    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Reconstructs the 2D spatial tangential electric field and evaluates
+        the genuine physical ohmic power loss density P_loss(x, y) = 0.5 * sigma(x, y) * |E_tan(x, y)|^2.
+        
+        Args:
+            sdf: 2D Signed Distance Field (Ny, Nx).
+            freq_hz: Evaluation frequency in Hertz (default: 12.0 GHz, mid X/Ku-band).
+            pol: Polarization mode ('TE' or 'TM').
+            theta_deg: Incident elevation angle in degrees.
+            phi_deg: Incident azimuth angle in degrees.
+            
+        Returns:
+            x_coords_mm: 1D array of x coordinates in mm.
+            y_coords_mm: 1D array of y coordinates in mm.
+            P_loss: 2D array of ohmic power loss density in W/m^3.
+        """
+        ny, nx = sdf.shape
+        theta_rad = np.radians(theta_deg)
+        phi_rad = np.radians(phi_deg)
+        
+        # 2D conductivity map
+        sigma_map = sdf_to_conductivity(
+            sdf,
+            sigma_film=self.stackup.sigma_film,
+            beta=self.stackup.beta_heaviside,
+        )
+        M_sigma = self._compute_fourier_convolution(sigma_map)
+        
+        # Solve boundary problem and retrieve modal field coefficients
+        _, _, e_total = self.simulate_single_frequency(
+            freq_hz, M_sigma, pol=pol, theta_rad=theta_rad, phi_rad=phi_rad, return_modal_fields=True
+        )
+        
+        # Physical spatial grid
+        x_m = np.linspace(-self.stackup.px / 2.0, self.stackup.px / 2.0, nx)
+        y_m = np.linspace(-self.stackup.py / 2.0, self.stackup.py / 2.0, ny)
+        X_m, Y_m = np.meshgrid(x_m, y_m)
+        
+        omega = 2.0 * np.pi * freq_hz
+        k0 = omega / C_0
+        k_x0 = k0 * np.sin(theta_rad) * np.cos(phi_rad)
+        k_y0 = k0 * np.sin(theta_rad) * np.sin(phi_rad)
+        k_x = k_x0 + self.m_indices * (2.0 * np.pi / self.stackup.px)
+        k_y = k_y0 + self.n_indices * (2.0 * np.pi / self.stackup.py)
+        
+        # Fourier synthesis: E_tan(x, y) = sum_i e_total[i] * exp(-j * (k_x[i]*x + k_y[i]*y))
+        # Vectorized modal expansion
+        E_tan = np.zeros((ny, nx), dtype=complex)
+        for i in range(self.num_harmonics):
+            phase = np.exp(-1j * (k_x[i] * X_m + k_y[i] * Y_m))
+            E_tan += e_total[i] * phase
+            
+        # Ohmic power loss density: P_loss = 0.5 * sigma * |E_tan|^2 [W/m^3]
+        E_mag_sq = np.abs(E_tan)**2
+        P_loss = 0.5 * sigma_map * E_mag_sq
+        
+        x_coords_mm = x_m * 1e3
+        y_coords_mm = y_m * 1e3
+        return x_coords_mm, y_coords_mm, P_loss
+

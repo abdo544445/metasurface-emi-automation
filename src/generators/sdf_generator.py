@@ -1,12 +1,14 @@
 """
-Parametric C4v-Symmetric Signed Distance Field (SDF) Generator
-=============================================================
+Parametric C2v / C4v-Symmetric Signed Distance Field (SDF) Generator
+===================================================================
 Generates 2D continuous Signed Distance Fields (SDFs) representing
-metasurface unit cells constrained to C4v point-group symmetry
-(fourfold 90° rotation and orthogonal axis reflections).
+metasurface unit cells. For rectangular lattices (Px != Py), the spatial
+point-group symmetry is mathematically C2v (D2h), preserving 180° rotation
+and orthogonal axis reflections (canceling cross-polarization S21_VH = 0).
+For square lattices (Px == Py), it reduces to C4v fourfold rotational symmetry.
 
 Four Distinct Structural Topology Classes:
-- Class A: Cross & Loop Resonators (orthogonal arms, square loops, capacitive split gaps)
+- Class A: Cross & Loop Resonators (orthogonal arms, rectangular loops, capacitive split gaps)
 - Class B: Fractal & Multi-Ring Inclusions (annular rings, Minkowski bends, corner cutouts)
 - Class C: Smoothed Fourier Surface Noise (bandpass Gaussian random fields, curvilinear tracks)
 - Class D: Composite Hybrid Geometries (Boolean combinations of A, B, C with stochastic feature widths)
@@ -34,13 +36,25 @@ def create_coordinate_grid(resolution: int = 128) -> Tuple[np.ndarray, np.ndarra
     return X, Y, R
 
 
+def enforce_c2v_symmetry(pattern_quadrant: np.ndarray) -> np.ndarray:
+    """
+    Enforces exact C2v (D2h) symmetry on a 2D boolean mask from a quadrant (N/2, N/2).
+    Preserves reflection across horizontal and vertical axes and 180° rotation.
+    Mathematically exact for rectangular lattices (Px != Py), guaranteeing S21_VH = 0.
+    """
+    top = np.hstack([np.fliplr(pattern_quadrant), pattern_quadrant])
+    bottom = np.flipud(top)
+    return np.vstack([top, bottom])
+
+
 def enforce_c4v_symmetry(pattern_quadrant: np.ndarray) -> np.ndarray:
-    """Enforces C4v symmetry on a 2D boolean mask from a quadrant (N/2, N/2)."""
+    """Enforces C4v symmetry on a square grid quadrant (N/2, N/2)."""
     quad_sym = pattern_quadrant | pattern_quadrant.T
     top = np.hstack([np.fliplr(quad_sym), quad_sym])
     bottom = np.flipud(top)
     full = np.vstack([top, bottom])
     return full | np.rot90(full, 1) | np.rot90(full, 2) | np.rot90(full, 3)
+
 
 
 def check_minimum_feature_size(mask: np.ndarray, min_radius_pixels: float = 3.4) -> bool:
@@ -182,7 +196,7 @@ def generate_class_c_mask(resolution: int = 128, rng: Optional[np.random.Generat
     threshold = np.percentile(smoothed, rng.uniform(38, 62))
     mask_quad = smoothed > threshold
     
-    full_mask = enforce_c4v_symmetry(mask_quad)
+    full_mask = enforce_c2v_symmetry(mask_quad)
     return full_mask
 
 
@@ -217,25 +231,34 @@ def generate_class_d_mask(resolution: int = 128, rng: Optional[np.random.Generat
 
 
 # ==============================================================================
-# Main Generation Function
+# Main Generation Functions
 # ==============================================================================
 
-def generate_c4v_sdf(
+def generate_sdf(
     resolution: int = 128,
     mode: str = 'random',
     seed: Optional[int] = None,
     enforce_manufacturing_check: bool = True,
+    symmetry: str = 'c2v',
 ) -> np.ndarray:
     """
-    Synthesizes a C4v-symmetric Signed Distance Field (SDF) across 4 topology classes:
+    Synthesizes a symmetric Signed Distance Field (SDF) across 4 topology classes:
     - 'class_a': Cross & Loop Resonators
     - 'class_b': Fractal & Multi-Ring Inclusions
     - 'class_c': Smoothed Fourier Surface Noise
     - 'class_d': Composite Hybrid Geometries
     - 'random': Uniformly samples across classes A, B, C, D.
+
+    Symmetry:
+    - 'c2v': Exact C2v (D2h) point-group symmetry for rectangular unit cells (Px != Py).
+             Preserves 180° in-plane rotation and horizontal/vertical reflection,
+             guaranteeing S21_VH = 0 without geometric aspect ratio distortion.
+    - 'c4v': C4v fourfold rotational symmetry (strictly valid for square unit cells Px == Py).
     """
     rng = np.random.default_rng(seed)
     classes = ['class_a', 'class_b', 'class_c', 'class_d']
+    
+    sym_fn = enforce_c2v_symmetry if symmetry.lower() == 'c2v' else enforce_c4v_symmetry
     
     for _ in range(20):  # Retry attempts for valid manufacturing features
         selected_class = rng.choice(classes) if mode in ['random', 'diverse'] else mode
@@ -262,16 +285,48 @@ def generate_c4v_sdf(
             else:
                 raise ValueError(f"Unknown topology class: {selected_class}")
                 
-        # Enforce C4v symmetry
+        # Enforce symmetry from quadrant
         half = resolution // 2
-        c4v_mask = enforce_c4v_symmetry(mask[:half, :half])
+        sym_mask = sym_fn(mask[:half, :half])
         
         # Verify minimum feature size (r_min >= 150 um)
-        if not enforce_manufacturing_check or check_minimum_feature_size(c4v_mask):
-            return mask_to_sdf(c4v_mask, resolution)
+        if not enforce_manufacturing_check or check_minimum_feature_size(sym_mask):
+            return mask_to_sdf(sym_mask, resolution)
             
     # If all iterations failed, return smoothed mask as safe fallback
-    return mask_to_sdf(c4v_mask, resolution)
+    return mask_to_sdf(sym_mask, resolution)
+
+
+def generate_c2v_sdf(
+    resolution: int = 128,
+    mode: str = 'random',
+    seed: Optional[int] = None,
+    enforce_manufacturing_check: bool = True,
+) -> np.ndarray:
+    """Synthesizes a C2v (D2h) symmetric Signed Distance Field (SDF)."""
+    return generate_sdf(
+        resolution=resolution,
+        mode=mode,
+        seed=seed,
+        enforce_manufacturing_check=enforce_manufacturing_check,
+        symmetry='c2v',
+    )
+
+
+def generate_c4v_sdf(
+    resolution: int = 128,
+    mode: str = 'random',
+    seed: Optional[int] = None,
+    enforce_manufacturing_check: bool = True,
+) -> np.ndarray:
+    """Synthesizes a C4v-symmetric Signed Distance Field (SDF)."""
+    return generate_sdf(
+        resolution=resolution,
+        mode=mode,
+        seed=seed,
+        enforce_manufacturing_check=enforce_manufacturing_check,
+        symmetry='c4v',
+    )
 
 
 def generate_batch_sdfs(
@@ -279,11 +334,15 @@ def generate_batch_sdfs(
     resolution: int = 128,
     mode: str = 'diverse',
     seed: Optional[int] = None,
+    symmetry: str = 'c2v',
 ) -> np.ndarray:
-    """Generates a batch of C4v SDF tensors."""
+    """Generates a batch of symmetric SDF tensors."""
     rng = np.random.default_rng(seed)
     sdfs = np.zeros((batch_size, resolution, resolution), dtype=np.float32)
     for i in range(batch_size):
         item_seed = int(rng.integers(0, 2**31 - 1))
-        sdfs[i] = generate_c4v_sdf(resolution=resolution, mode=mode, seed=item_seed)
+        sdfs[i] = generate_sdf(
+            resolution=resolution, mode=mode, seed=item_seed, symmetry=symmetry
+        )
     return sdfs
+

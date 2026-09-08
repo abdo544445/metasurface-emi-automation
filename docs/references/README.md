@@ -84,11 +84,11 @@ We conducted an end-to-end mathematical and physical audit to verify whether eac
 
 | Feature / Metric | Smith et al. (2020) | Wang et al. (2021) | Li et al. (2026) | Zhang et al. (2025) | **This Work (Golden #1)** |
 |---|:---:|:---:|:---:|:---:|:---:|
-| **Inverse Method** | Intuitive | Genetic Algorithm | Feedforward NN | Trial-and-error | **$C_{4v}$ Guided Diffusion + 2D-FNO** |
+| **Inverse Method** | Intuitive | Genetic Algorithm | Feedforward NN | Trial-and-error | **$C_{2v}$ Guided Diffusion + 2D-FNO** |
 | **Geometry Representation** | Fixed shapes | Binary Grid | Macro-Gradient | Multi-layer film | **Continuous SDF ($\Phi(r)$)** |
 | **Total Thickness $d$** | $2.40\text{ mm}$ | $1.85\text{ mm}$ | $2.20\text{ mm}$ | $1.20\text{ mm}$ | **$1.175\text{ mm}$** |
 | **Bandwidth (FBW)** | $48.0\%$ | $55.0\%$ | $160.0\%$ ($2-18\text{ GHz}$) | $65.0\%$ | **$74.8\%$ ($8.2-18.0\text{ GHz}$)** |
-| **Shielding $SE_T$** | $42.5\text{ dB}$ | $48.0\text{ dB}$ | $\approx 50\text{ dB}$ | $>60\text{ dB}$ | **$65.4\text{ dB}$** |
-| **Absorption Ratio** | $\approx 75\%$ | $\approx 80\%$ | $\approx 85\%$ | $>90\%$ | **$94.2\%$** |
-| **Rozanov Bound Ratio $\rho_R$** | $0.582$ | $0.645$ | $0.720$ | $0.760$ | **$0.824$** |
+| **Shielding $SE_T$** | $42.5\text{ dB}$ | $48.0\text{ dB}$ | $\approx 50\text{ dB}$ | $>60\text{ dB}$ | **$30.8\text{ dB}$** |
+| **Absorption Ratio** | $\approx 75\%$ | $\approx 80\%$ | $\approx 85\%$ | $>90\%$ | **$57.6\%$** |
+| **Causality Metric $\rho_R$** | $0.582$ | $0.645$ | $0.720$ | $0.760$ | **$0.021$** |
 | **CAD Mask Export** | Manual | None | Manual | None | **Automated DXF Vector Mask** |
