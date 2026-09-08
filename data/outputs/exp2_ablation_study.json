@@ -1,0 +1,49 @@
+{
+  "experiment": "Architectural Ablation Study",
+  "cases": [
+    {
+      "configuration": "Vanilla Diffusion (Unconstrained)",
+      "use_c2v": false,
+      "use_helmholtz": false,
+      "use_guidance": false,
+      "mean_se_t_db": 28.75422042784864,
+      "inference_latency_ms": 13.966665267944336,
+      "min_feature_size_um": 98.78293470523569,
+      "manufacturing_yield_percent": 0.0,
+      "cross_polarization_zeroed": false
+    },
+    {
+      "configuration": "Diffusion + C2v Only",
+      "use_c2v": true,
+      "use_helmholtz": false,
+      "use_guidance": false,
+      "mean_se_t_db": 28.76975012903207,
+      "inference_latency_ms": 13.57706069946289,
+      "min_feature_size_um": 93.09129888209426,
+      "manufacturing_yield_percent": 0.0,
+      "cross_polarization_zeroed": true
+    },
+    {
+      "configuration": "Diffusion + Helmholtz Filter Only",
+      "use_c2v": false,
+      "use_helmholtz": true,
+      "use_guidance": true,
+      "mean_se_t_db": 28.60650035741548,
+      "inference_latency_ms": 13.293824195861816,
+      "min_feature_size_um": 401.2444610830695,
+      "manufacturing_yield_percent": 0.0,
+      "cross_polarization_zeroed": false
+    },
+    {
+      "configuration": "Full Pipeline (Equiv-Diff + FNO + Helmholtz)",
+      "use_c2v": true,
+      "use_helmholtz": true,
+      "use_guidance": true,
+      "mean_se_t_db": 28.701407435601347,
+      "inference_latency_ms": 14.292807579040527,
+      "min_feature_size_um": 354.86794102501693,
+      "manufacturing_yield_percent": 0.0,
+      "cross_polarization_zeroed": true
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "experiment": "Data Scaling Law",
+  "power_law_fit": {
+    "gamma": 2.356177985670903,
+    "C": 673898.178803534,
+    "formula": "NMSE = 6.739e+05 * N^(-2.356)"
+  },
+  "points": [
+    {
+      "num_training_samples": 500,
+      "training_time_s": 27.899882078170776,
+      "test_mse": 0.033309951424598694,
+      "test_nmse": 0.1908550159022154,
+      "test_r2": 0.8091449840977846
+    },
+    {
+      "num_training_samples": 1000,
+      "training_time_s": 45.40710115432739,
+      "test_mse": 0.01176852360367775,
+      "test_nmse": 0.06742975187489557,
+      "test_r2": 0.9325702481251045
+    },
+    {
+      "num_training_samples": 2500,
+      "training_time_s": 111.36213994026184,
+      "test_mse": 0.004001793451607227,
+      "test_nmse": 0.022928954266797773,
+      "test_r2": 0.9770710457332022
+    },
+    {
+      "num_training_samples": 5000,
+      "training_time_s": 221.0859251022339,
+      "test_mse": 6.794894579797983e-05,
+      "test_nmse": 0.00038932500877906796,
+      "test_r2": 0.9996106749912209
+    },
+    {
+      "num_training_samples": 8000,
+      "training_time_s": 347.8316719532013,
+      "test_mse": 9.524553752271459e-05,
+      "test_nmse": 0.0005457254604426896,
+      "test_r2": 0.9994542745395573
+    }
+  ]
+}

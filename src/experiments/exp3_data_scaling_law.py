@@ -23,15 +23,18 @@ from torch.utils.data import DataLoader
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.insert(0, BASE_DIR)
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 from src.experiments.scale_dataset_and_fno import FNOSurrogate2D, MetasurfaceDataset, compute_passivity_penalty
 
 
-def run_data_scaling_study(subset_sizes=[500, 1000, 2500, 5000, 8000], epochs=15):
+def run_data_scaling_study(subset_sizes=[500, 1000, 2500, 5000, 8000], epochs=6):
     outputs_dir = os.path.join(BASE_DIR, 'data/outputs')
     h5_path = os.path.join(BASE_DIR, 'data/raw/metasurface_dataset_25k.h5')
 
     device = torch.device('mps' if torch.backends.mps.is_available() else 'cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Running Experiment 3 (Data Scaling Law) on device: {device}...")
+    print(f"Running Experiment 3 (Data Scaling Law) on device: {device}...", flush=True)
 
     test_ds = MetasurfaceDataset(h5_path, split='test')
     test_loader = DataLoader(test_ds, batch_size=64, shuffle=False)

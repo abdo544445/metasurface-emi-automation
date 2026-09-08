@@ -201,11 +201,11 @@ def run_scaling_pipeline(total_samples: int = 10000, epochs: int = 25, batch_siz
             best_val_loss = val_loss
             torch.save(model.state_dict(), best_weights_path)
 
-        if ep % 5 == 0 or ep == epochs:
-            print(f"  Epoch {ep:2d}/{epochs} | Train Loss: {train_loss:.6f} | Val Loss: {val_loss:.6f} | Passivity: {pass_loss_total:.6e}")
+        if ep % 2 == 0 or ep == 1 or ep == epochs:
+            print(f"  Epoch {ep:2d}/{epochs} | Train Loss: {train_loss:.6f} | Val Loss: {val_loss:.6f} | Passivity: {pass_loss_total:.6e}", flush=True)
 
     train_time = time.time() - t0
-    print(f"Training completed in {train_time:.1f} s ({train_time/epochs:.2f} s/epoch). Best Val Loss: {best_val_loss:.6f}")
+    print(f"Training completed in {train_time:.1f} s ({train_time/epochs:.2f} s/epoch). Best Val Loss: {best_val_loss:.6f}", flush=True)
 
     # 4. Evaluation on 1,000 Held-Out Test Samples
     model.load_state_dict(torch.load(best_weights_path, map_location=device))

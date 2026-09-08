@@ -91,13 +91,34 @@ def run_ablation_study(num_samples_per_case: int = 50):
             noise = torch.randn(1, 1, 128, 128, device=device)
 
             if cfg["use_c2v"]:
-                # Enforce C2v symmetry
                 noise_rot = torch.rot90(noise, 2, [2, 3])
                 noise_fh = torch.flip(noise, [2])
                 noise_fv = torch.flip(noise, [3])
                 x = (noise + noise_rot + noise_fh + noise_fv) / 4.0
             else:
                 x = noise
+
+            if cfg["use_guidance"]:
+                num_denoise_steps = 15
+                dt = 1.0 / num_denoise_steps
+                for _ in range(num_denoise_steps):
+                    x.requires_grad_(True)
+                    x_in = helmholtz(x) if cfg["use_helmholtz"] else x
+                    pred = fno_model(x_in)
+                    s21_sq = pred[:, 2, :]**2 + pred[:, 3, :]**2
+                    loss = torch.mean(s21_sq)
+                    grad = torch.autograd.grad(loss, x)[0]
+                    grad_norm = grad / (torch.linalg.vector_norm(grad) + 1e-6)
+                    with torch.no_grad():
+                        x = x - dt * 2.0 * grad_norm
+                        if cfg["use_c2v"]:
+                            x_rot = torch.rot90(x, 2, [2, 3])
+                            x_fh = torch.flip(x, [2])
+                            x_fv = torch.flip(x, [3])
+                            x = (x + x_rot + x_fh + x_fv) / 4.0
+            else:
+                # Without guidance, apply simple smoothing if helmholtz enabled
+                pass
 
             if cfg["use_helmholtz"]:
                 x = helmholtz(x)

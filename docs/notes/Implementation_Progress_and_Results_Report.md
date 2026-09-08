@@ -49,9 +49,10 @@ flowchart TD
 * **Master Dataset:** [../../data/raw/metasurface_dataset_25k.h5](../../data/raw/metasurface_dataset_25k.h5)
 
 #### Core Implementations:
-1. **$C_{4v}$ Parametric SDF Generator:**
-   Constructs continuous Signed Distance Fields $\Phi(r) \in \mathbb{R}^{128 \times 128}$ on rectangular Floquet pitch $P_x \times P_y = 5.715\text{ mm} \times 5.080\text{ mm}$. Symmetrization enforces fourfold rotation ($90^\circ, 180^\circ, 270^\circ$) and orthogonal reflections:
-   $$\Phi_{\mathrm{sym}}(r) = \frac{1}{8}\sum_{g \in C_{4v}} \Phi(g \cdot r)$$
+1. **$C_{2v}$ Parametric SDF Generator:**
+   Constructs continuous Signed Distance Fields $\Phi(r) \in \mathbb{R}^{128 \times 128}$ on rectangular Floquet pitch $P_x \times P_y = 5.715\text{ mm} \times 5.080\text{ mm}$. Symmetrization enforces twofold rotation ($180^\circ$) and orthogonal horizontal/vertical reflections ($C_{2v} / D_{2h}$ point group):
+   $$\Phi_{\mathrm{sym}}(r) = \frac{1}{4}\sum_{g \in C_{2v}} \Phi(g \cdot r)$$
+   This guarantees exact linear polarization decoupling ($S_{21}^{\mathrm{VH}} = S_{12}^{\mathrm{HV}} = 0$) and compatibility with rectangular waveguide apertures.
 2. **Four Structural Topology Classes (A, B, C, D):**
    * Class A: Cross & Loop Resonators (Jerusalem crosses, interlocked square loops).
    * Class B: Nested Complementary Rings & Split Rings.

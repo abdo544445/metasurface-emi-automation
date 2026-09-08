@@ -65,6 +65,22 @@ def generate_single_validated_sample(
     return None
 
 
+from concurrent.futures import ProcessPoolExecutor
+
+_GLOBAL_SOLVER: Optional[MetasurfaceRCWASolver] = None
+
+def _get_worker_solver() -> MetasurfaceRCWASolver:
+    global _GLOBAL_SOLVER
+    if _GLOBAL_SOLVER is None:
+        _GLOBAL_SOLVER = MetasurfaceRCWASolver()
+    return _GLOBAL_SOLVER
+
+def _worker_generate_sample(args: Tuple[int, int, str]) -> Optional[Dict[str, Any]]:
+    seed, resolution, mode = args
+    solver = _get_worker_solver()
+    return generate_single_validated_sample(seed=seed, resolution=resolution, solver=solver, mode=mode)
+
+
 def generate_stratified_dataset(
     total_samples: int = 1000,
     train_ratio: float = 0.80,
@@ -75,9 +91,11 @@ def generate_stratified_dataset(
     solver: Optional[MetasurfaceRCWASolver] = None,
     seed: int = 2026,
     verbose: bool = True,
+    num_workers: Optional[int] = None,
 ) -> Dict[str, Dict[str, np.ndarray]]:
     """
-    Executes scaled batch generation and stores stratified HDF5 archives (/train, /val, /test).
+    Executes scaled batch generation with multi-process concurrency
+    and stores stratified HDF5 archives (/train, /val, /test).
     """
     if solver is None:
         solver = MetasurfaceRCWASolver()
@@ -101,6 +119,9 @@ def generate_stratified_dataset(
             "s21_imag": np.zeros((count, solver.num_freq_points), dtype=np.float32),
             "rho_R": np.zeros(count, dtype=np.float32),
             "SE_T": np.zeros((count, solver.num_freq_points), dtype=np.float32),
+            "SE_A": np.zeros((count, solver.num_freq_points), dtype=np.float32),
+            "SE_R": np.zeros((count, solver.num_freq_points), dtype=np.float32),
+            "absorption": np.zeros((count, solver.num_freq_points), dtype=np.float32),
         }
         for split, count in split_counts.items()
     }
@@ -108,22 +129,32 @@ def generate_stratified_dataset(
     rng = np.random.default_rng(seed)
     start_time = time.time()
     
-    if verbose:
-        print(f"Generating {total_samples} stratified samples (Train: {num_train}, Val: {num_val}, Test: {num_test})...")
+    if num_workers is None:
+        num_workers = min(os.cpu_count() or 4, 8)
         
-    for split, count in split_counts.items():
-        filled = 0
-        while filled < count:
-            seed_i = int(rng.integers(0, 2**31 - 1))
-            sample = generate_single_validated_sample(seed_i, resolution, solver, mode='diverse')
-            if sample is not None:
-                for key in stratified_data[split].keys():
-                    stratified_data[split][key][filled] = sample[key]
-                filled += 1
+    if verbose:
+        print(f"Generating {total_samples} stratified samples on {num_workers} parallel workers (Train: {num_train}, Val: {num_val}, Test: {num_test})...", flush=True)
+        
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        for split, count in split_counts.items():
+            filled = 0
+            while filled < count:
+                batch_size = min(num_workers * 16, count - filled + num_workers * 4)
+                seeds = [(int(rng.integers(0, 2**31 - 1)), resolution, 'diverse') for _ in range(batch_size)]
+                results = list(executor.map(_worker_generate_sample, seeds))
+                for sample in results:
+                    if sample is not None and filled < count:
+                        for key in stratified_data[split].keys():
+                            stratified_data[split][key][filled] = sample[key]
+                        filled += 1
+                if verbose and filled % 1000 == 0:
+                    print(f"  [{split}] Progress: {filled}/{count} ({filled/count*100:.1f}%)", flush=True)
+            if verbose:
+                print(f"  Partition '{split}': {filled}/{count} validated samples generated.", flush=True)
                 
     elapsed = time.time() - start_time
     if verbose:
-        print(f"Dataset generation completed in {elapsed:.2f} s ({elapsed/total_samples*1000:.1f} ms/sample).")
+        print(f"Dataset generation completed in {elapsed:.2f} s ({elapsed/total_samples*1000:.1f} ms/sample).", flush=True)
         
     if output_h5_path is not None:
         os.makedirs(os.path.dirname(os.path.abspath(output_h5_path)), exist_ok=True)
@@ -138,6 +169,6 @@ def generate_stratified_dataset(
                     grp.create_dataset(key, data=arr, compression="gzip", compression_opts=4)
                     
         if verbose:
-            print(f"Saved stratified HDF5 dataset to: {output_h5_path}")
+            print(f"Saved stratified HDF5 dataset to: {output_h5_path}", flush=True)
             
     return stratified_data

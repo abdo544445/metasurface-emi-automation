@@ -9,7 +9,7 @@
 |                                    PHASE 1 WORKFLOW PIPELINE                                     |
 +--------------------------------------------------------------------------------------------------+
 |  Parametric SDF Generator  -->  RCWA Batch Solver Engine  -->  FNO Forward Surrogate Training    |
-|   (10,000 C4v Unit Cells)        (8.2 - 18.0 GHz Sweep)        (Complex S11, S21 Prediction)     |
+|   (10,000 C2v Unit Cells)        (8.2 - 18.0 GHz Sweep)        (Complex S11, S21 Prediction)     |
 +--------------------------------------------------------------------------------------------------+
 
 ```
@@ -17,7 +17,7 @@
 ### 1.1 Synthetic Dataset Generation
 
 * **Parametric Geometry Engine:** Develop a Python geometry generator using `numpy` and `scipy.ndimage` to synthesize 10,000 distinct unit-cell patterns represented as continuous Signed Distance Fields ($\Phi \in \mathbb{R}^{128 \times 128}$) with unit-cell dimensions fixed to $P_x \times P_y = 5.715\text{ mm} \times 5.080\text{ mm}$.
-* **Symmetry Enforcement:** Restrict the generator to the $C_{4v}$ point group (fourfold rotation $90^\circ$ and two orthogonal reflection planes) to guarantee inherent polarization independence.
+* **Symmetry Enforcement:** Restrict the generator to the $C_{2v}$ point group (twofold rotation $180^\circ$ and two orthogonal reflection planes) to match rectangular waveguide aspect ratios and suppress cross-polarization ($S_{21}^{\mathrm{VH}} = 0$).
 * **Stackup & Material Parameters:**
   * Top Conductive Layer: Patterned impedance sheet ($R_s = 5 - 50\,\Omega/\text{sq}$, modeling MXene/carbon composite films).
   * Dielectric Spacer: Flexible Polyimide ($\epsilon_r = 3.5$, $\tan\delta = 0.008$, thickness $t = 50\,\mu\text{m}$).
