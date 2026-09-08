@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary & Framework Architecture
 
-This project establishes a complete, closed-loop computational framework for the inverse design of ultra-thin, broadband, absorption-dominant electromagnetic interference (EMI) metasurfaces. By integrating continuous Signed Distance Fields ($\Phi(r)$), $C_{4v}$ point-group equivariant neural operators, differentiable Helmholtz boundary regularizers, physics-guided diffusion score modeling, and automated microwave laboratory validation pipelines, the system designs unit-cell topologies operating near the theoretical Rozanov causality bound.
+This project establishes a complete, closed-loop computational framework for the inverse design of ultra-thin, broadband, absorption-dominant electromagnetic interference (EMI) metasurfaces. By integrating continuous Signed Distance Fields ($\Phi(r)$), $C_{2v}$ point-group equivariant neural operators, differentiable Helmholtz boundary regularizers, physics-guided diffusion score modeling, and automated microwave laboratory validation pipelines, the system designs unit-cell topologies operating near the theoretical Rozanov causality bound.
 
 ```mermaid
 flowchart TD
