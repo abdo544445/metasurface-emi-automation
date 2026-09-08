@@ -4,7 +4,7 @@ geometry:
   resolution: 128
   px_mm: 5.715
   py_mm: 5.080
-  symmetry: "C4v"
+  symmetry: "C2v"
   min_feature_size_um: 150.0
 
 conductivity_mapping:

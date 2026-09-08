@@ -28,9 +28,10 @@ from .em_model import (
 
 class MetasurfaceRCWASolver:
     """
-    Electromagnetic solver for C4v metasurface unit cells.
+    Electromagnetic solver for C2v / C4v metasurface unit cells.
     Computes complex S-parameters (S11, S21) over specified frequency bands.
     """
+
     
     def __init__(
         self,

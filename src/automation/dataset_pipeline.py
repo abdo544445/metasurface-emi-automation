@@ -1,7 +1,7 @@
 """
 High-Throughput Parallel Batch Dataset Generation & Stratified Archival
 =======================================================================
-Orchestrates parallel simulation of C4v unit cells across 4 topology classes,
+Orchestrates parallel simulation of C2v unit cells across 4 topology classes,
 enforces automated quality gates (Passivity, Rozanov bound, Manufacturing resolution),
 and exports chunked, compressed, stratified HDF5 archives (/train, /val, /test).
 """
@@ -12,7 +12,7 @@ import h5py
 import numpy as np
 from typing import Dict, Any, Optional, List, Tuple
 
-from ..generators.sdf_generator import generate_c4v_sdf
+from ..generators.sdf_generator import generate_c2v_sdf, generate_c4v_sdf
 from .rcwa_solver import MetasurfaceRCWASolver
 from .em_model import MetasurfaceStackup
 from ..analysis.validation import audit_sample
@@ -34,8 +34,9 @@ def generate_single_validated_sample(
     
     for attempt in range(15):
         sample_seed = int(rng.integers(0, 2**31 - 1))
-        sdf = generate_c4v_sdf(resolution=resolution, mode=mode, seed=sample_seed)
+        sdf = generate_c2v_sdf(resolution=resolution, mode=mode, seed=sample_seed)
         res = solver.solve(sdf, pol='both')
+
         
         audit = audit_sample(
             freqs_ghz=res["freqs_ghz"],

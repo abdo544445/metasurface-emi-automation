@@ -12,7 +12,7 @@ This project establishes a complete, closed-loop computational framework for the
 ```mermaid
 flowchart TD
     subgraph P1["Phase 1: Forward Modeling & Surrogate Pipeline"]
-        D1["Phase 1.1: Synthetic Data Engine<br/>- 4 C4v Topology Classes (A, B, C, D)<br/>- Differentiable Heaviside σ(r)<br/>- 5-Layer Composite RCWA-TMM Solver"]
+        D1["Phase 1.1: Synthetic Data Engine<br/>- 4 C2v Topology Classes (A, B, C, D)<br/>- Differentiable Heaviside σ(r)<br/>- 5-Layer Composite RCWA-TMM Solver"]
         D2["Phase 1.2: 2D-FNO Forward Surrogate<br/>- 4 Spectral Conv Blocks (k_max=16)<br/>- Exact Passivity Loss Penalty<br/>- R^2 = 0.9989, Latency = 0.125 ms"]
         D1 --> D2
     end
